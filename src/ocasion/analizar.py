@@ -3,7 +3,7 @@
 from dataclasses import asdict
 from datetime import date
 
-from ocasion import informe, router
+from ocasion import informe, opiniones, router
 from ocasion.carburantes import precio_actual
 from ocasion.coste import coste_total
 from ocasion.extraccion import extraer_de_imagen, extraer_de_texto
@@ -73,6 +73,7 @@ def analizar(
     provincia: str = "Malaga",
     imagenes: list[tuple[bytes, str]] | None = None,
     estrategia: str = "router",
+    con_opiniones: bool = False,
 ) -> dict:
     llamadas = []
     resultados = []
@@ -90,6 +91,18 @@ def analizar(
     modelo = router.modelo_informe(resultados, estrategia)
     inf, ll = informe.redactar(resultados, modelo)
     llamadas.append(ll)
+
+    if con_opiniones:
+        # Va DESPUÉS del informe y aparte: así las opiniones de internet no se mezclan
+        # con las cifras calculadas que usa el informe.
+        for r in resultados:
+            f = r["ficha"]
+            if f["marca"] and f["modelo"]:
+                r["opiniones"], ll = opiniones.buscar(
+                    f["marca"], f["modelo"], f["anio"], f["combustible"]
+                )
+                if ll:  # None si venía de la caché: no ha costado nada
+                    llamadas.append(ll)
 
     return {
         "informe": inf.model_dump(),

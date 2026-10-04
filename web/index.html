@@ -24,6 +24,9 @@
   .uso { color:var(--suave); font-size:.85rem; margin-top:12px; }
   .aviso { color:var(--suave); font-size:.8rem; margin-top:24px; }
   .error { color:#b3261e; }
+  .casilla { flex-direction:row; align-items:center; gap:8px; }
+  .opiniones li { margin-bottom:6px; }
+  .opiniones a { font-size:.8rem; color:var(--acento); margin-left:6px; }
 </style>
 </head>
 <body>
@@ -37,6 +40,7 @@
     <label>Km al año <input type="number" id="km" value="15000" min="1000" step="1000"></label>
     <label>Provincia <input id="provincia" value="Málaga"></label>
   </div>
+  <label class="casilla"><input type="checkbox" id="opiniones"> Buscar opiniones de propietarios en internet (tarda unos segundos más)</label>
   <button id="boton">Analizar</button>
   <p class="uso">La primera vez puede tardar unos segundos en despertar.</p>
 
@@ -84,7 +88,29 @@ function tarjetaCoche(a, i) {
   if (c) t.append(elemento("p", `Coste estimado a 3 años: ${c.total.toLocaleString("es")} € (${c.supuestos.join(" · ")})`));
   a.alertas.forEach((al) => t.append(elemento("p", `⚠ ${al.mensaje}`)));
   if (a.nota) t.append(elemento("p", a.nota, "uso"));
+  if (a.opiniones) t.append(bloqueOpiniones(a.opiniones));
   return t;
+}
+
+function bloqueOpiniones(op) {
+  const div = elemento("div", undefined, "opiniones");
+  div.append(elemento("h3", "Lo que dicen los propietarios"));
+  if (!op.puntos.length) {
+    div.append(elemento("p", "No se han encontrado opiniones con fuentes fiables para este modelo.", "uso"));
+    return div;
+  }
+  const ul = elemento("ul");
+  for (const p of op.puntos) {
+    const li = elemento("li", `${p.tipo === "fuerte" ? "👍" : "⚠"} ${p.texto}`);
+    p.fuentes.filter((f) => /^https?:\/\//.test(f.url)).forEach((f, i) => {   // solo enlaces web normales
+      const a = elemento("a", `[${i + 1}]`);
+      a.href = f.url; a.title = f.titulo; a.target = "_blank"; a.rel = "noopener noreferrer";
+      li.append(a);
+    });
+    ul.append(li);
+  }
+  div.append(ul, elemento("p", op.aviso, "uso"));
+  return div;
 }
 
 async function analizar() {
@@ -99,12 +125,14 @@ async function analizar() {
       datos.append("imagen", archivo);
       datos.append("km_anuales", $("km").value);
       datos.append("provincia", $("provincia").value);
+      datos.append("opiniones", $("opiniones").checked);
       r = await fetch("/analizar-imagen", { method: "POST", body: datos });
     } else {
       const anuncios = $("texto").value.split(/\n-{3,}\n/).map((s) => s.trim()).filter(Boolean);
       r = await fetch("/analizar", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ anuncios, km_anuales: Number($("km").value), provincia: $("provincia").value }),
+        body: JSON.stringify({ anuncios, km_anuales: Number($("km").value), provincia: $("provincia").value,
+                               opiniones: $("opiniones").checked }),
       });
     }
     const j = await r.json();

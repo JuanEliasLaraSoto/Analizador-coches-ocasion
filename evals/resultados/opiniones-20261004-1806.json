@@ -1,0 +1,16 @@
+{
+  "coches": 5,
+  "puntos_con_fuente": 0,
+  "puntos_descartados_sin_fuente": 0,
+  "pct_con_fuente": null,
+  "coches_sin_resultados": [
+    "Seat León 2016 diesel",
+    "Volkswagen Golf 2018 gasolina",
+    "Toyota Corolla 2020 hibrido",
+    "Renault Clio 2015 gasolina",
+    "Peugeot 308 2017 diesel"
+  ],
+  "busquedas": 0,
+  "coste_usd_medio": 0.0,
+  "segundos_medios": 0.0
+}

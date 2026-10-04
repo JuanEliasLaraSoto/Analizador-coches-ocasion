@@ -68,3 +68,16 @@ def test_pipeline_completo(entorno):
 def test_varios_anuncios_usan_sonnet_para_el_informe(entorno):
     r = pipeline.analizar([ANUNCIO, ANUNCIO])
     assert llm.SONNET in r["uso"]["modelos"]
+
+
+def test_opiniones_solo_si_se_piden(entorno, monkeypatch):
+    def buscar_falso(marca, modelo, anio, combustible):
+        llamada = llm.Llamada("opiniones", llm.HAIKU, 0, 0, 1.0, busquedas=1)
+        return {"puntos": [], "desde_cache": False}, llamada
+
+    monkeypatch.setattr(pipeline.opiniones, "buscar", buscar_falso)
+    sin = pipeline.analizar([ANUNCIO])
+    con = pipeline.analizar([ANUNCIO], con_opiniones=True)
+    assert "opiniones" not in sin["analisis"][0]
+    assert con["analisis"][0]["opiniones"]["puntos"] == []
+    assert con["uso"]["coste_usd"] == pytest.approx(sin["uso"]["coste_usd"] + 0.01)

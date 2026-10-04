@@ -37,6 +37,7 @@ class Peticion(BaseModel):
     anuncios: list[str] = Field(min_length=1, max_length=3)
     km_anuales: int = Field(15_000, ge=1_000, le=100_000)
     provincia: str = "Malaga"
+    opiniones: bool = False  # buscar opiniones de propietarios (más lento y algo más caro)
 
 
 @app.get("/health")
@@ -54,7 +55,12 @@ def analizar_texto(peticion: Peticion, request: Request):
     comprobar_limite(request.client.host if request.client else "desconocida")
     if any(len(a) > 6000 for a in peticion.anuncios):
         raise HTTPException(422, "Cada anuncio puede tener como máximo 6000 caracteres.")
-    return analizar(peticion.anuncios, peticion.km_anuales, peticion.provincia)
+    return analizar(
+        peticion.anuncios,
+        peticion.km_anuales,
+        peticion.provincia,
+        con_opiniones=peticion.opiniones,
+    )
 
 
 @app.post("/analizar-imagen")
@@ -63,6 +69,7 @@ async def analizar_imagen(
     imagen: UploadFile = File(...),
     km_anuales: int = Form(15_000),
     provincia: str = Form("Malaga"),
+    opiniones: bool = Form(False),
 ):
     comprobar_limite(request.client.host if request.client else "desconocida")
     if imagen.content_type not in TIPOS_IMAGEN:
@@ -70,4 +77,10 @@ async def analizar_imagen(
     datos = await imagen.read()
     if len(datos) > MAX_IMAGEN_BYTES:
         raise HTTPException(413, "La imagen no puede superar 5 MB.")
-    return analizar([], km_anuales, provincia, imagenes=[(datos, imagen.content_type)])
+    return analizar(
+        [],
+        km_anuales,
+        provincia,
+        imagenes=[(datos, imagen.content_type)],
+        con_opiniones=opiniones,
+    )

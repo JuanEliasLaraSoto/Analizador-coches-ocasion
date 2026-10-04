@@ -10,9 +10,12 @@ def test_health():
 
 
 def test_analizar_llama_al_pipeline(monkeypatch):
-    monkeypatch.setattr(api, "analizar", lambda anuncios, km, prov: {"recibidos": len(anuncios)})
-    r = cliente.post("/analizar", json={"anuncios": ["a", "b"]})
-    assert r.status_code == 200 and r.json() == {"recibidos": 2}
+    def falso(anuncios, km, prov, con_opiniones):
+        return {"recibidos": len(anuncios), "opiniones": con_opiniones}
+
+    monkeypatch.setattr(api, "analizar", falso)
+    r = cliente.post("/analizar", json={"anuncios": ["a", "b"], "opiniones": True})
+    assert r.status_code == 200 and r.json() == {"recibidos": 2, "opiniones": True}
 
 
 def test_rechaza_demasiados_anuncios():
