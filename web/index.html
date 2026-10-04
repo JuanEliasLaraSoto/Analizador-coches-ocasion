@@ -3,156 +3,789 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Analizador de coches de ocasión</title>
+<title>Ocasión — analiza un coche de segunda mano antes de comprarlo</title>
+<meta name="description" content="Pega el anuncio de un coche usado y descubre si el precio es justo, qué te costará en 3 años y qué preguntarle al vendedor.">
+<meta name="theme-color" content="#f3efe6">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316140f'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%23e8590c' stroke-width='3'/%3E%3Cpath d='M16 16 L21 11' stroke='%23f3efe6' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
-  :root { --tinta:#1b2430; --suave:#5b6573; --acento:#0f6e6e; --fondo:#f6f7f9; --linea:#d5dbe1;
-          --anuncio:#e3f1f0; --deducido:#e8f5e9; --desconocido:#fdecea; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:system-ui, sans-serif; color:var(--tinta); background:var(--fondo); }
-  main { max-width:860px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { margin:0 0 4px; font-size:1.7rem; }
-  .sub { color:var(--suave); margin:0 0 20px; }
-  textarea { width:100%; min-height:150px; padding:12px; border:1px solid var(--linea); border-radius:8px; font:inherit; }
-  .fila { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0; }
-  label { font-size:.9rem; color:var(--suave); display:flex; flex-direction:column; gap:4px; }
-  input { padding:8px; border:1px solid var(--linea); border-radius:6px; font:inherit; }
-  button { background:var(--acento); color:#fff; border:0; border-radius:8px; padding:10px 18px; font:inherit; cursor:pointer; }
-  button:disabled { opacity:.6; cursor:wait; }
-  .tarjeta { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px; margin-top:16px; }
-  .chips span { display:inline-block; padding:3px 8px; border-radius:6px; margin:3px; font-size:.85rem; }
-  .anuncio { background:var(--anuncio); } .deducido { background:var(--deducido); } .desconocido { background:var(--desconocido); }
-  .uso { color:var(--suave); font-size:.85rem; margin-top:12px; }
-  .aviso { color:var(--suave); font-size:.8rem; margin-top:24px; }
-  .error { color:#b3261e; }
-  .casilla { flex-direction:row; align-items:center; gap:8px; }
-  .opiniones li { margin-bottom:6px; }
-  .opiniones a { font-size:.8rem; color:var(--acento); margin-left:6px; }
+  :root {
+    --papel: #f3efe6;
+    --superficie: #fbf9f4;
+    --tinta: #16140f;
+    --suave: #6b665c;
+    --tenue: #9a9487;
+    --linea: #ddd6c6;
+    --linea-fuerte: #c9c0ac;
+    --acento: #e8590c;
+    --acento-tinta: #fff;
+    --bien: #2f7d4a;
+    --bien-fondo: #e3efe3;
+    --aviso: #a86412;
+    --aviso-fondo: #f6ead2;
+    --mal: #b42318;
+    --mal-fondo: #f7e1dc;
+    --info: #3b5b8c;
+    --info-fondo: #e2e8f2;
+    --matricula: #003399;
+    --sombra: 0 1px 0 rgba(22,20,15,.04), 0 12px 32px -18px rgba(22,20,15,.25);
+    --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    --sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --papel: #12110e;
+      --superficie: #1a1915;
+      --tinta: #efeadf;
+      --suave: #a39d90;
+      --tenue: #77715f;
+      --linea: #2c2a24;
+      --linea-fuerte: #3d3a31;
+      --acento: #ff7a2e;
+      --acento-tinta: #16140f;
+      --bien: #7bc48f;
+      --bien-fondo: #1d2a20;
+      --aviso: #e2a44f;
+      --aviso-fondo: #2c2416;
+      --mal: #f08a7c;
+      --mal-fondo: #2f1b18;
+      --info: #9db6dc;
+      --info-fondo: #1b2230;
+      --sombra: 0 1px 0 rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.7);
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; font: 400 16px/1.55 var(--sans); color: var(--tinta); background: var(--papel);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  /* grano sutil de papel */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .35;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .envoltorio { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  a { color: inherit; }
+  ::selection { background: var(--acento); color: var(--acento-tinta); }
+
+  /* cabecera */
+  header.barra {
+    display: flex; align-items: center; justify-content: space-between; padding: 18px 0;
+    border-bottom: 1px solid var(--linea);
+  }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -.01em; text-decoration: none; }
+  .marca svg { width: 26px; height: 26px; }
+  .marca em { font: italic 400 1.35rem/1 var(--serif); letter-spacing: 0; }
+  .barra nav { display: flex; gap: 22px; font-size: .9rem; color: var(--suave); }
+  .barra nav a { text-decoration: none; }
+  .barra nav a:hover { color: var(--tinta); }
+
+  /* portada */
+  .portada { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; padding: 64px 0 40px; align-items: start; }
+  .antetitulo {
+    font: 500 .72rem/1 var(--mono); text-transform: uppercase; letter-spacing: .14em; color: var(--suave);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .antetitulo::before { content: ""; width: 18px; height: 1px; background: currentColor; }
+  h1 {
+    font: 400 clamp(2.6rem, 5.6vw, 4.4rem)/.98 var(--serif); letter-spacing: -.02em; margin: 18px 0 20px;
+  }
+  h1 em { color: var(--acento); }
+  .entradilla { font-size: 1.1rem; color: var(--suave); max-width: 34ch; margin: 0 0 32px; }
+  .pasos { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linea); }
+  .pasos li { display: grid; grid-template-columns: 44px 1fr; gap: 6px; padding: 14px 0; border-bottom: 1px solid var(--linea); font-size: .95rem; }
+  .pasos b { font-weight: 600; display: block; }
+  .pasos span { color: var(--suave); }
+  .pasos .num { font: 500 .78rem/1.9 var(--mono); color: var(--tenue); }
+
+  /* formulario */
+  .panel {
+    background: var(--superficie); border: 1px solid var(--linea); border-radius: 14px; box-shadow: var(--sombra);
+    overflow: hidden;
+  }
+  .pestanas { display: flex; border-bottom: 1px solid var(--linea); }
+  .pestanas button {
+    flex: 1; background: none; border: 0; padding: 14px 12px; font: 500 .9rem var(--sans); color: var(--suave);
+    cursor: pointer; position: relative;
+  }
+  .pestanas button[aria-selected="true"] { color: var(--tinta); }
+  .pestanas button[aria-selected="true"]::after {
+    content: ""; position: absolute; left: 16px; right: 16px; bottom: -1px; height: 2px; background: var(--tinta);
+  }
+  .pestanas button + button { border-left: 1px solid var(--linea); }
+  .cuerpo { padding: 18px; }
+  textarea {
+    width: 100%; min-height: 200px; resize: vertical; padding: 4px 2px; border: 0; background: transparent;
+    font: 400 .95rem/1.6 var(--sans); color: var(--tinta); outline: none;
+  }
+  textarea::placeholder { color: var(--tenue); }
+  .contador { display: flex; justify-content: space-between; font: .75rem var(--mono); color: var(--tenue); padding-top: 8px; border-top: 1px dashed var(--linea); }
+  .contador .exceso { color: var(--mal); }
+
+  .soltar {
+    display: grid; place-items: center; text-align: center; gap: 6px; min-height: 200px; padding: 20px;
+    border: 1.5px dashed var(--linea-fuerte); border-radius: 10px; cursor: pointer; color: var(--suave);
+    transition: border-color .15s, background .15s;
+  }
+  .soltar:hover, .soltar.encima { border-color: var(--acento); background: color-mix(in srgb, var(--acento) 5%, transparent); }
+  .soltar strong { color: var(--tinta); font-weight: 500; }
+  .soltar small { font: .75rem var(--mono); color: var(--tenue); }
+  .soltar img { max-width: 100%; max-height: 160px; border-radius: 6px; border: 1px solid var(--linea); }
+  .soltar input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+  .ajustes { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--linea); }
+  .ajustes label { padding: 12px 18px; display: flex; flex-direction: column; gap: 2px; }
+  .ajustes label + label { border-left: 1px solid var(--linea); }
+  .ajustes span { font: 500 .68rem/1.4 var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--tenue); }
+  .ajustes input {
+    border: 0; background: transparent; padding: 2px 0; font: 500 1rem var(--sans); color: var(--tinta); outline: none; width: 100%;
+  }
+  .ajustes label:focus-within { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
+
+  .interruptor { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--linea); cursor: pointer; font-size: .9rem; }
+  .interruptor input { position: absolute; opacity: 0; }
+  .interruptor .pista {
+    flex: none; width: 34px; height: 20px; border-radius: 20px; background: var(--linea-fuerte); position: relative; transition: background .15s; margin-top: 1px;
+  }
+  .interruptor .pista::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    transition: transform .18s cubic-bezier(.3,.7,.4,1); box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  .interruptor input:checked + .pista { background: var(--acento); }
+  .interruptor input:checked + .pista::after { transform: translateX(14px); }
+  .interruptor input:focus-visible + .pista { outline: 2px solid var(--acento); outline-offset: 2px; }
+  .interruptor small { display: block; color: var(--suave); font-size: .8rem; }
+
+  .accion { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--linea); background: color-mix(in srgb, var(--tinta) 2.5%, transparent); }
+  .accion p { margin: 0; font-size: .78rem; color: var(--tenue); }
+  .accion kbd { font: .72rem var(--mono); border: 1px solid var(--linea-fuerte); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+  .boton {
+    display: inline-flex; align-items: center; gap: 10px; background: var(--tinta); color: var(--papel); border: 0; border-radius: 999px;
+    padding: 12px 20px 12px 22px; font: 500 .95rem var(--sans); cursor: pointer; white-space: nowrap; transition: transform .12s, background .15s;
+  }
+  .boton:hover { background: var(--acento); color: var(--acento-tinta); }
+  .boton:active { transform: translateY(1px); }
+  .boton:disabled { opacity: .55; cursor: progress; background: var(--tinta); color: var(--papel); }
+  .boton svg { width: 16px; height: 16px; transition: transform .15s; }
+  .boton:hover svg { transform: translateX(3px); }
+  :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+  /* resultados */
+  #resultado { padding: 8px 0 24px; scroll-margin-top: 16px; }
+  #resultado:empty { display: none; }
+  .seccion-titulo { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-top: 2px solid var(--tinta); padding-top: 14px; margin: 40px 0 20px; }
+  .seccion-titulo h2 { font: 400 2rem/1.1 var(--serif); margin: 0; letter-spacing: -.01em; }
+  .seccion-titulo span { font: .75rem var(--mono); color: var(--tenue); text-align: right; }
+
+  .veredicto { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0; background: var(--superficie); border: 1px solid var(--linea); border-radius: 14px; overflow: hidden; box-shadow: var(--sombra); }
+  .veredicto .texto { padding: 28px 30px; }
+  .veredicto .texto p { font: 400 1.45rem/1.35 var(--serif); margin: 0; }
+  .veredicto aside { padding: 24px 26px; border-left: 1px solid var(--linea); background: color-mix(in srgb, var(--tinta) 2.5%, transparent); }
+  .etiqueta { font: 500 .68rem/1.4 var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--tenue); margin: 0 0 10px; }
+  .ranking { list-style: none; margin: 0; padding: 0; counter-reset: r; }
+  .ranking li { counter-increment: r; display: grid; grid-template-columns: 28px 1fr; padding: 8px 0; border-bottom: 1px solid var(--linea); font-size: .92rem; }
+  .ranking li:last-child { border-bottom: 0; }
+  .ranking li::before { content: counter(r, decimal-leading-zero); font: 500 .8rem/1.75 var(--mono); color: var(--acento); }
+
+  .columnas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  .bloque { background: var(--superficie); border: 1px solid var(--linea); border-radius: 12px; padding: 18px 20px; }
+  .bloque h3 { font: 600 .95rem/1.3 var(--sans); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .bloque h3 i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .bloque ul { margin: 0; padding: 0; list-style: none; }
+  .bloque li { padding: 8px 0 8px 20px; position: relative; font-size: .9rem; border-top: 1px solid var(--linea); }
+  .bloque li:first-child { border-top: 0; padding-top: 0; }
+  .bloque li::before { content: "—"; position: absolute; left: 0; color: var(--tenue); }
+  .bloque li:first-child::before { top: 0; }
+  .bloque.preguntas li::before { content: "?"; font: 500 .85rem var(--mono); color: var(--acento); }
+
+  .coche { margin-top: 28px; background: var(--superficie); border: 1px solid var(--linea); border-radius: 14px; box-shadow: var(--sombra); overflow: hidden; }
+  .coche-cab { display: flex; align-items: center; gap: 18px; padding: 20px 24px; border-bottom: 1px solid var(--linea); flex-wrap: wrap; }
+  .matricula {
+    display: inline-flex; align-items: stretch; border: 1.5px solid #1b1b1b; border-radius: 4px; overflow: hidden; background: #fff; color: #111;
+    font: 500 1rem/1 var(--mono); letter-spacing: .08em; box-shadow: 0 1px 0 rgba(0,0,0,.08);
+  }
+  .matricula b { background: var(--matricula); color: #fff; font: 600 .62rem/1 var(--sans); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 3px 4px; gap: 3px; }
+  .matricula b::before { content: "★"; color: #ffcc00; font-size: .55rem; letter-spacing: 0; }
+  .matricula span { padding: 7px 10px; }
+  .coche-cab h3 { font: 400 1.75rem/1.1 var(--serif); margin: 0; flex: 1; min-width: 200px; }
+  .coche-cab h3 small { display: block; font: 400 .85rem/1.4 var(--sans); color: var(--suave); margin-top: 4px; }
+  .precio-gordo { text-align: right; }
+  .precio-gordo strong { font: 500 1.6rem/1 var(--mono); letter-spacing: -.02em; display: block; }
+  .precio-gordo span { font: .72rem var(--mono); color: var(--tenue); text-transform: uppercase; letter-spacing: .1em; }
+
+  .coche-cuerpo { display: grid; grid-template-columns: 1fr 1fr; }
+  .coche-cuerpo > section { padding: 20px 24px; border-bottom: 1px solid var(--linea); }
+  .coche-cuerpo > section:nth-child(odd) { border-right: 1px solid var(--linea); }
+  .coche-cuerpo > section.ancho { grid-column: 1 / -1; border-right: 0; }
+
+  .sello { display: inline-block; font: 500 .72rem/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; padding: 5px 8px; border-radius: 4px; }
+  .sello.bien { background: var(--bien-fondo); color: var(--bien); }
+  .sello.aviso { background: var(--aviso-fondo); color: var(--aviso); }
+  .sello.mal { background: var(--mal-fondo); color: var(--mal); }
+  .sello.neutro { background: color-mix(in srgb, var(--tinta) 7%, transparent); color: var(--suave); }
+
+  .medidor { margin: 18px 0 6px; }
+  .medidor .riel { position: relative; height: 10px; border-radius: 10px; background: color-mix(in srgb, var(--tinta) 7%, transparent); }
+  .medidor .rango { position: absolute; top: 0; bottom: 0; border-radius: 10px; background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--bien) 40%, transparent) 0 4px, color-mix(in srgb, var(--bien) 25%, transparent) 4px 8px); border: 1px solid color-mix(in srgb, var(--bien) 60%, transparent); }
+  .medidor .aguja { position: absolute; top: -7px; width: 2px; height: 24px; background: var(--tinta); transform: translateX(-1px); }
+  .medidor .aguja::after { content: ""; position: absolute; top: -5px; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--acento); border: 2px solid var(--superficie); }
+  .medidor .marcas { display: flex; justify-content: space-between; font: .72rem var(--mono); color: var(--tenue); margin-top: 10px; }
+  .cifra { font: 500 1.25rem/1.2 var(--mono); letter-spacing: -.01em; }
+  .nota-peq { font-size: .8rem; color: var(--suave); margin: 8px 0 0; }
+
+  .apilada { display: flex; height: 12px; border-radius: 3px; overflow: hidden; margin: 14px 0 12px; gap: 2px; }
+  .apilada div { min-width: 3px; }
+  .leyenda { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: .85rem; }
+  .leyenda dt { display: flex; align-items: center; gap: 8px; color: var(--suave); }
+  .leyenda dt i { width: 9px; height: 9px; border-radius: 2px; }
+  .leyenda dd { margin: 0; font: .85rem var(--mono); text-align: right; }
+  .c1 { background: var(--tinta); } .c2 { background: var(--acento); } .c3 { background: var(--info); } .c4 { background: var(--tenue); }
+
+  .ficha { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0; border-top: 1px solid var(--linea); border-left: 1px solid var(--linea); margin-top: 6px; }
+  .ficha div { padding: 10px 12px; border-right: 1px solid var(--linea); border-bottom: 1px solid var(--linea); position: relative; }
+  .ficha dt { font: 500 .66rem/1.4 var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--tenue); display: flex; align-items: center; gap: 6px; }
+  .ficha dd { margin: 2px 0 0; font-size: .92rem; font-weight: 500; }
+  .ficha .desconocido dd { color: var(--tenue); font-weight: 400; font-style: italic; }
+  .punto { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex: none; }
+  .punto.anuncio { background: var(--tinta); }
+  .punto.deducido { background: var(--bien); }
+  .punto.desconocido { background: transparent; border: 1px solid var(--tenue); }
+  .leyenda-proc { display: flex; gap: 16px; flex-wrap: wrap; font-size: .78rem; color: var(--suave); }
+  .leyenda-proc span { display: inline-flex; align-items: center; gap: 6px; }
+  .cab-seccion { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cab-seccion .etiqueta { margin: 0; }
+
+  .alerta { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--linea); font-size: .92rem; }
+  .alerta:first-of-type { border-top: 0; padding-top: 0; }
+  .sin-alertas { color: var(--suave); font-size: .9rem; margin: 0; }
+
+  .opiniones { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .opiniones h4 { font: 600 .85rem var(--sans); margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+  .opiniones ul { list-style: none; margin: 0; padding: 0; }
+  .opiniones li { font-size: .9rem; padding: 7px 0; border-top: 1px solid var(--linea); }
+  .opiniones li:first-child { border-top: 0; }
+  .opiniones sup a { font: 500 .68rem var(--mono); color: var(--acento); text-decoration: none; margin-left: 2px; }
+  .opiniones sup a:hover { text-decoration: underline; }
+
+  .nota-imagen { margin: 0; padding: 12px 24px; font-size: .82rem; color: var(--aviso); background: var(--aviso-fondo); }
+
+  .uso { display: flex; gap: 18px; flex-wrap: wrap; justify-content: flex-end; font: .72rem var(--mono); color: var(--tenue); margin-top: 18px; }
+
+  .cargando { margin-top: 40px; border-top: 2px solid var(--tinta); padding-top: 18px; }
+  .cargando .linea-progreso { height: 2px; background: var(--linea); overflow: hidden; margin: 14px 0 22px; }
+  .cargando .linea-progreso::after { content: ""; display: block; height: 100%; width: 30%; background: var(--acento); animation: barrido 1.3s cubic-bezier(.6,0,.4,1) infinite; }
+  @keyframes barrido { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+  .cargando ol { list-style: none; padding: 0; margin: 0; font-size: .95rem; }
+  .cargando li { display: flex; align-items: center; gap: 12px; padding: 6px 0; color: var(--tenue); transition: color .2s; }
+  .cargando li::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid currentColor; flex: none; }
+  .cargando li.hecho { color: var(--suave); }
+  .cargando li.hecho::before { background: var(--bien); border-color: var(--bien); box-shadow: inset 0 0 0 3px var(--superficie); }
+  .cargando li.activo { color: var(--tinta); }
+  .cargando li.activo::before { border-color: var(--acento); border-right-color: transparent; animation: gira .8s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  .error { margin-top: 32px; padding: 16px 20px; border: 1px solid var(--mal); border-left-width: 4px; border-radius: 8px; background: var(--mal-fondo); color: var(--mal); font-size: .92rem; }
+  .error b { display: block; margin-bottom: 2px; }
+
+  .aparece { animation: aparece .45s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes aparece { from { opacity: 0; transform: translateY(8px); } }
+
+  /* explicación */
+  .metodo { display: grid; grid-template-columns: 280px 1fr; gap: 48px; padding: 56px 0; border-top: 1px solid var(--linea); margin-top: 40px; }
+  .metodo h2 { font: 400 2.2rem/1.05 var(--serif); margin: 0; letter-spacing: -.01em; }
+  .metodo h2 em { color: var(--acento); }
+  .metodo dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 36px; margin: 0; }
+  .metodo dt { font-weight: 600; margin-bottom: 4px; display: flex; gap: 10px; align-items: baseline; }
+  .metodo dt span { font: 500 .72rem var(--mono); color: var(--acento); }
+  .metodo dd { margin: 0; color: var(--suave); font-size: .92rem; }
+
+  footer { border-top: 1px solid var(--linea); padding: 24px 0 40px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; font-size: .8rem; color: var(--tenue); }
+  footer p { margin: 0; max-width: 62ch; }
+
+  @media (max-width: 860px) {
+    .portada { grid-template-columns: 1fr; gap: 32px; padding-top: 40px; }
+    .entradilla { max-width: none; }
+    .veredicto, .coche-cuerpo, .opiniones, .metodo, .metodo dl { grid-template-columns: 1fr; }
+    .veredicto aside { border-left: 0; border-top: 1px solid var(--linea); }
+    .coche-cuerpo > section:nth-child(odd) { border-right: 0; }
+    .columnas { grid-template-columns: 1fr; }
+    .metodo { gap: 24px; }
+    .barra nav { display: none; }
+  }
+  @media (max-width: 520px) {
+    .envoltorio { padding: 0 16px; }
+    .accion { flex-direction: column-reverse; align-items: stretch; }
+    .boton { justify-content: center; }
+    .accion p { text-align: center; }
+    .coche-cab, .coche-cuerpo > section, .veredicto .texto, .veredicto aside { padding-left: 18px; padding-right: 18px; }
+    .precio-gordo { text-align: left; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<main>
-  <h1>Analizador de coches de ocasión</h1>
-  <p class="sub">Pega uno o varios anuncios (sepáralos con una línea <b>---</b>) o sube una captura.</p>
+<div class="envoltorio">
+  <header class="barra">
+    <a class="marca" href="/">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><circle cx="16" cy="16" r="8" fill="none" stroke="#e8590c" stroke-width="3"/><path d="M16 16 L21 11" style="stroke:var(--papel)" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span>Ocasión<em>.</em></span>
+    </a>
+    <nav><a href="#metodo">Cómo funciona</a><a href="#analizar">Analizar un anuncio</a></nav>
+  </header>
 
-  <textarea id="texto" placeholder="Vendo Seat León 1.6 TDI de 2016, 85.000 km, ITV recién pasada..."></textarea>
-  <div class="fila">
-    <label>O sube una captura <input type="file" id="imagen" accept="image/png,image/jpeg,image/webp"></label>
-    <label>Km al año <input type="number" id="km" value="15000" min="1000" step="1000"></label>
-    <label>Provincia <input id="provincia" value="Málaga"></label>
-  </div>
-  <label class="casilla"><input type="checkbox" id="opiniones"> Buscar opiniones de propietarios en internet (tarda unos segundos más)</label>
-  <button id="boton">Analizar</button>
-  <p class="uso">La primera vez puede tardar unos segundos en despertar.</p>
+  <section class="portada">
+    <div>
+      <span class="antetitulo">Coches de segunda mano · España</span>
+      <h1>Antes de llamar al vendedor, <em>léete esto.</em></h1>
+      <p class="entradilla">Pega el anuncio y te decimos si el precio es razonable, cuánto te va a costar de verdad y qué tienes que preguntar.</p>
+      <ol class="pasos">
+        <li><span class="num">01</span><div><b>Precio de mercado</b><span>Rango estimado con miles de coches parecidos.</span></div></li>
+        <li><span class="num">02</span><div><b>Coste real a 3 años</b><span>Carburante al precio de hoy en tu provincia, seguro y mantenimiento.</span></div></li>
+        <li><span class="num">03</span><div><b>Lo que no dice el anuncio</b><span>Señales raras y las preguntas que deberías hacer.</span></div></li>
+      </ol>
+    </div>
 
-  <div id="resultado"></div>
+    <form class="panel" id="analizar" novalidate>
+      <div class="pestanas" role="tablist">
+        <button type="button" role="tab" id="tab-texto" aria-selected="true" aria-controls="modo-texto">Pegar anuncio</button>
+        <button type="button" role="tab" id="tab-imagen" aria-selected="false" aria-controls="modo-imagen">Subir captura</button>
+      </div>
+      <div class="cuerpo" id="modo-texto" role="tabpanel" aria-labelledby="tab-texto">
+        <textarea id="texto" aria-label="Texto del anuncio" placeholder="Vendo Seat León 1.6 TDI Style de 2016, 85.000 km, ITV recién pasada, libro de revisiones al día. 11.900 €.
 
-  <p class="aviso">Proyecto personal, no oficial. Resultados orientativos: compruébalos siempre con el informe del vehículo de la DGT
-  y una revisión mecánica. Precios de carburantes: datos abiertos del Ministerio.</p>
-</main>
+---
+
+Para comparar, pega otro anuncio debajo de una línea con tres guiones."></textarea>
+        <div class="contador"><span id="cuenta">0 anuncios</span><span>máx. 3 · separa con ---</span></div>
+      </div>
+      <div class="cuerpo" id="modo-imagen" role="tabpanel" aria-labelledby="tab-imagen" hidden>
+        <label class="soltar" id="soltar">
+          <input type="file" id="imagen" accept="image/png,image/jpeg,image/webp">
+          <div id="soltar-contenido">
+            <strong>Arrastra aquí la captura del anuncio</strong><br>
+            <span>o haz clic para elegirla</span><br>
+            <small>PNG, JPG o WEBP · hasta 5 MB</small>
+          </div>
+        </label>
+      </div>
+      <div class="ajustes">
+        <label><span>Km al año que harás</span><input type="number" id="km" value="15000" min="1000" max="100000" step="1000" inputmode="numeric"></label>
+        <label><span>Tu provincia</span><input id="provincia" value="Málaga" autocomplete="address-level1"></label>
+      </div>
+      <label class="interruptor">
+        <input type="checkbox" id="opiniones">
+        <span class="pista" aria-hidden="true"></span>
+        <span>Buscar opiniones de propietarios<small>Averías típicas y puntos fuertes del modelo, con fuentes. Tarda unos segundos más.</small></span>
+      </label>
+      <div class="accion">
+        <p>Si lleva rato sin usarse, el primer análisis tarda algo más. <kbd>Ctrl</kbd> + <kbd>Enter</kbd></p>
+        <button class="boton" id="boton" type="submit">Analizar
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <div id="resultado" aria-live="polite"></div>
+
+  <section class="metodo" id="metodo">
+    <h2>Cómo lo <em>calculamos</em></h2>
+    <dl>
+      <div><dt><span>A</span>Solo lo que dice el anuncio</dt><dd>Cada dato de la ficha va respaldado por una frase literal del anuncio. Lo que no se puede justificar se descarta y se marca como desconocido.</dd></div>
+      <div><dt><span>B</span>Un modelo de precios, no una corazonada</dt><dd>El rango de precio sale de un modelo entrenado con anuncios reales y calibrado para que acierte la mayoría de las veces.</dd></div>
+      <div><dt><span>C</span>Reglas claras</dt><dd>Periodicidad de la ITV, kilometraje por año y datos imposibles se comprueban con reglas fijas, siempre igual.</dd></div>
+      <div><dt><span>D</span>Precios de carburante reales</dt><dd>El coste a 3 años usa el precio medio actual en tu provincia, con datos abiertos del Ministerio.</dd></div>
+    </dl>
+  </section>
+
+  <footer>
+    <p>Proyecto personal, no oficial. Los resultados son orientativos: antes de pagar, pide siempre el informe del vehículo de la DGT y una revisión en un taller de confianza.</p>
+    <p>Precios de carburantes: datos abiertos del Ministerio.</p>
+  </footer>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
+let modo = "texto";
 
-function elemento(tag, texto, clase) {
+// Todo el contenido que viene del servidor se inserta con textContent: nunca como HTML.
+function el(tag, texto, clase) {
   const e = document.createElement(tag);
-  if (texto !== undefined) e.textContent = texto;   // textContent: nunca se interpreta como HTML
+  if (texto !== undefined && texto !== null) e.textContent = texto;
   if (clase) e.className = clase;
   return e;
 }
+const euros = (n) => `${Math.round(n).toLocaleString("es")} €`;
+const separar = (t) => t.split(/\n-{3,}\n/).map((s) => s.trim()).filter(Boolean);
 
-function lista(titulo, items) {
-  const div = elemento("div");
-  if (!items || !items.length) return div;
-  div.append(elemento("h3", titulo));
-  const ul = elemento("ul");
-  items.forEach((i) => ul.append(elemento("li", i)));
-  div.append(ul);
-  return div;
+const CAMPOS = {
+  marca: "Marca", modelo: "Modelo", version: "Versión", anio: "Año", km: "Kilómetros", precio: "Precio",
+  combustible: "Combustible", cambio: "Cambio", potencia_cv: "Potencia", num_duenos: "Propietarios",
+  itv_hasta: "ITV hasta", libro_revisiones: "Libro de revisiones", tipo_vendedor: "Vendedor", provincia: "Provincia",
+};
+const COMBUSTIBLES = {
+  gasolina: "Gasolina", diesel: "Diésel", hibrido: "Híbrido", hibrido_enchufable: "Híbrido enchufable",
+  electrico: "Eléctrico", glp: "GLP", gnc: "GNC",
+};
+function valorCampo(campo, v) {
+  if (v === null || v === undefined) return "No lo indica";
+  if (typeof v === "boolean") return v ? "Sí" : "No";
+  if (campo === "km") return `${v.toLocaleString("es")} km`;
+  if (campo === "precio") return euros(v);
+  if (campo === "potencia_cv") return `${v} CV`;
+  if (campo === "combustible") return COMBUSTIBLES[v] ?? v;
+  if (typeof v === "string") return v.charAt(0).toUpperCase() + v.slice(1);
+  return String(v);
+}
+
+/* ---------- formulario ---------- */
+function cambiarModo(nuevo) {
+  modo = nuevo;
+  $("tab-texto").setAttribute("aria-selected", nuevo === "texto");
+  $("tab-imagen").setAttribute("aria-selected", nuevo === "imagen");
+  $("modo-texto").hidden = nuevo !== "texto";
+  $("modo-imagen").hidden = nuevo !== "imagen";
+}
+$("tab-texto").addEventListener("click", () => cambiarModo("texto"));
+$("tab-imagen").addEventListener("click", () => cambiarModo("imagen"));
+
+function actualizarCuenta() {
+  const n = separar($("texto").value).length;
+  const c = $("cuenta");
+  c.textContent = n === 1 ? "1 anuncio" : `${n} anuncios`;
+  c.classList.toggle("exceso", n > 3);
+}
+$("texto").addEventListener("input", actualizarCuenta);
+
+function mostrarArchivo(archivo) {
+  const caja = $("soltar-contenido");
+  if (!archivo) return;
+  const img = el("img");
+  img.alt = "Vista previa de la captura";
+  img.src = URL.createObjectURL(archivo);
+  caja.replaceChildren(img, el("div", archivo.name, null), el("small", "Haz clic para cambiarla"));
+}
+$("imagen").addEventListener("change", (e) => mostrarArchivo(e.target.files[0]));
+const zona = $("soltar");
+["dragenter", "dragover"].forEach((t) => zona.addEventListener(t, (e) => { e.preventDefault(); zona.classList.add("encima"); }));
+["dragleave", "drop"].forEach((t) => zona.addEventListener(t, () => zona.classList.remove("encima")));
+zona.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  const dt = new DataTransfer();
+  dt.items.add(f);
+  $("imagen").files = dt.files;
+  mostrarArchivo(f);
+});
+
+/* ---------- carga ---------- */
+let temporizador;
+function mostrarCarga(conOpiniones) {
+  const pasos = ["Leyendo el anuncio", "Comprobando ITV, kilómetros y coherencia", "Estimando el precio de mercado",
+                 "Calculando el coste a 3 años", "Redactando el informe"];
+  if (conOpiniones) pasos.push("Buscando opiniones de propietarios");
+  const caja = el("div", undefined, "cargando aparece");
+  caja.append(el("p", "Analizando", "etiqueta"), el("div", undefined, "linea-progreso"));
+  const ol = el("ol");
+  const items = pasos.map((p) => el("li", p));
+  ol.append(...items);
+  caja.append(ol);
+  $("resultado").replaceChildren(caja);
+  let i = 0;
+  items[0].className = "activo";
+  clearInterval(temporizador);
+  temporizador = setInterval(() => {
+    if (i >= items.length - 1) return clearInterval(temporizador);
+    items[i].className = "hecho";
+    items[++i].className = "activo";
+  }, 2400);
+}
+
+/* ---------- resultados ---------- */
+function listaBloque(titulo, items, color, clase) {
+  const b = el("div", undefined, `bloque ${clase ?? ""}`);
+  const h = el("h3");
+  const i = el("i"); i.style.background = color;
+  h.append(i, titulo);
+  b.append(h);
+  const ul = el("ul");
+  (items.length ? items : ["Nada destacable."]).forEach((x) => ul.append(el("li", x)));
+  b.append(ul);
+  return b;
+}
+
+function seccionInforme(inf, uso, n) {
+  const frag = document.createDocumentFragment();
+  const t = el("div", undefined, "seccion-titulo");
+  t.append(el("h2", "El veredicto"), el("span", n > 1 ? `${n} anuncios comparados` : "1 anuncio analizado"));
+  frag.append(t);
+
+  const v = el("div", undefined, "veredicto aparece");
+  const tx = el("div", undefined, "texto");
+  tx.append(el("p", inf.veredicto));
+  v.append(tx);
+  if (inf.ranking && inf.ranking.length) {
+    const a = el("aside");
+    a.append(el("p", "Orden de preferencia", "etiqueta"));
+    const ol = el("ol", undefined, "ranking");
+    inf.ranking.forEach((r) => ol.append(el("li", r)));
+    a.append(ol);
+    v.append(a);
+  } else {
+    tx.style.gridColumn = "1 / -1";
+  }
+  frag.append(v);
+
+  const cols = el("div", undefined, "columnas aparece");
+  cols.append(
+    listaBloque("A favor", inf.puntos_fuertes, "var(--bien)"),
+    listaBloque("Ojo con esto", inf.alertas, "var(--mal)"),
+    listaBloque("Pregúntale al vendedor", inf.preguntas_vendedor, "var(--acento)", "preguntas"),
+  );
+  frag.append(cols);
+  return frag;
+}
+
+function claseVeredicto(v) {
+  if (!v) return "neutro";
+  if (v.includes("debajo")) return "bien";
+  if (v.includes("encima")) return "mal";
+  return "neutro";
+}
+
+function seccionPrecio(v, precio) {
+  const s = el("section");
+  const cab = el("div", undefined, "cab-seccion");
+  cab.append(el("p", "Precio de mercado", "etiqueta"));
+  if (v.veredicto) {
+    const signo = v.desviacion_pct > 0 ? "+" : "";
+    cab.append(el("span", `${v.veredicto} · ${signo}${v.desviacion_pct.toLocaleString("es")} %`, `sello ${claseVeredicto(v.veredicto)}`));
+  }
+  s.append(cab, el("div", `${euros(v.rango_min)} – ${euros(v.rango_max)}`, "cifra"));
+
+  const valores = [v.rango_min, v.rango_max, precio].filter((x) => typeof x === "number");
+  const lo = Math.min(...valores) * 0.88, hi = Math.max(...valores) * 1.12;
+  const pct = (x) => `${((x - lo) / (hi - lo)) * 100}%`;
+  const m = el("div", undefined, "medidor");
+  const riel = el("div", undefined, "riel");
+  const rango = el("div", undefined, "rango");
+  rango.style.left = pct(v.rango_min);
+  rango.style.width = `calc(${pct(v.rango_max)} - ${pct(v.rango_min)})`;
+  riel.append(rango);
+  if (precio) {
+    const ag = el("div", undefined, "aguja");
+    ag.style.left = pct(precio);
+    ag.title = `Precio del anuncio: ${euros(precio)}`;
+    riel.append(ag);
+  }
+  const marcas = el("div", undefined, "marcas");
+  marcas.append(el("span", euros(lo)), el("span", `estimado ${euros(v.precio_estimado)}`), el("span", euros(hi)));
+  m.append(riel, marcas);
+  s.append(m);
+  s.append(el("p", precio ? "La barra rayada es el rango habitual; el punto naranja, lo que pide este anuncio."
+                          : "El anuncio no indica precio, así que solo podemos darte el rango habitual.", "nota-peq"));
+  return s;
+}
+
+function seccionCoste(c) {
+  const s = el("section");
+  const cab = el("div", undefined, "cab-seccion");
+  cab.append(el("p", `Coste total a ${c.anios} años`, "etiqueta"));
+  s.append(cab, el("div", euros(c.total), "cifra"));
+  const partes = [["Compra", c.compra, "c1"], ["Carburante / energía", c.energia, "c2"],
+                  ["Seguro", c.seguro, "c3"], ["Mantenimiento", c.mantenimiento, "c4"]];
+  const barra = el("div", undefined, "apilada");
+  const dl = el("dl", undefined, "leyenda");
+  for (const [nombre, valor, clase] of partes) {
+    const d = el("div", undefined, clase);
+    d.style.flex = String(Math.max(valor, 0));
+    d.title = `${nombre}: ${euros(valor)}`;
+    barra.append(d);
+    const dt = el("dt");
+    dt.append(el("i", undefined, clase), nombre);
+    dl.append(dt, el("dd", euros(valor)));
+  }
+  s.append(barra, dl, el("p", c.supuestos.join(" · "), "nota-peq"));
+  return s;
+}
+
+function seccionFicha(a) {
+  const s = el("section", undefined, "ancho");
+  const cab = el("div", undefined, "cab-seccion");
+  cab.append(el("p", "Ficha extraída", "etiqueta"));
+  const ley = el("div", undefined, "leyenda-proc");
+  [["anuncio", "Lo dice el anuncio"], ["deducido", "Deducido"], ["desconocido", "No lo indica"]].forEach(([c, t]) => {
+    const sp = el("span"); sp.append(el("i", undefined, `punto ${c}`), t); ley.append(sp);
+  });
+  cab.append(ley);
+  s.append(cab);
+  const dl = el("dl", undefined, "ficha");
+  const f = a.ficha;
+  const filas = Object.entries(a.procedencia).map(([campo, proc]) => [CAMPOS[campo] ?? campo, valorCampo(campo, f[campo]), proc]);
+  if (a.deducido && a.deducido.frecuencia_itv) filas.push(["Frecuencia ITV", valorCampo("", a.deducido.frecuencia_itv), "deducido"]);
+  // primero lo conocido, al final lo que falta
+  filas.sort((x, y) => (x[2] === "desconocido") - (y[2] === "desconocido"));
+  for (const [nombre, valor, proc] of filas) {
+    const d = el("div", undefined, proc);
+    const dt = el("dt");
+    dt.append(el("i", undefined, `punto ${proc}`), nombre);
+    d.append(dt, el("dd", valor));
+    dl.append(d);
+  }
+  s.append(dl);
+  return s;
+}
+
+function seccionAlertas(alertas) {
+  const s = el("section", undefined, "ancho");
+  s.append(el("p", "Comprobaciones automáticas", "etiqueta"));
+  if (!alertas.length) {
+    s.append(el("p", "Año, kilómetros y precio son coherentes entre sí. Nada raro a primera vista.", "sin-alertas"));
+    return s;
+  }
+  const niveles = { grave: ["Grave", "mal"], aviso: ["Revisar", "aviso"], info: ["Nota", "neutro"] };
+  for (const al of alertas) {
+    const [txt, cls] = niveles[al.nivel] ?? ["Nota", "neutro"];
+    const fila = el("div", undefined, "alerta");
+    fila.append(el("span", txt, `sello ${cls}`), el("span", al.mensaje));
+    s.append(fila);
+  }
+  return s;
+}
+
+function seccionOpiniones(op) {
+  const s = el("section", undefined, "ancho");
+  s.append(el("p", "Lo que dicen los propietarios", "etiqueta"));
+  if (!op.puntos.length) {
+    s.append(el("p", "No hemos encontrado opiniones con fuentes fiables para este modelo.", "sin-alertas"));
+    if (op.aviso) s.append(el("p", op.aviso, "nota-peq"));
+    return s;
+  }
+  const grid = el("div", undefined, "opiniones");
+  const grupos = [["fuerte", "Lo que gusta", "var(--bien)"], ["problema", "Problemas conocidos", "var(--mal)"]];
+  for (const [tipo, titulo, color] of grupos) {
+    const puntos = op.puntos.filter((p) => (tipo === "fuerte") === (p.tipo === "fuerte"));
+    if (!puntos.length) continue;
+    const col = el("div");
+    const h = el("h4");
+    const i = el("i", undefined, "punto"); i.style.background = color;
+    h.append(i, titulo);
+    const ul = el("ul");
+    for (const p of puntos) {
+      const li = el("li", p.texto);
+      p.fuentes.filter((f) => /^https?:\/\//.test(f.url)).forEach((f, n) => {   // solo enlaces web normales
+        const sup = el("sup");
+        const a = el("a", `[${n + 1}]`);
+        a.href = f.url; a.title = f.titulo; a.target = "_blank"; a.rel = "noopener noreferrer";
+        sup.append(a);
+        li.append(sup);
+      });
+      ul.append(li);
+    }
+    col.append(h, ul);
+    grid.append(col);
+  }
+  s.append(grid);
+  if (op.aviso) s.append(el("p", op.aviso, "nota-peq"));
+  return s;
 }
 
 function tarjetaCoche(a, i) {
-  const t = elemento("div", undefined, "tarjeta");
   const f = a.ficha;
-  t.append(elemento("h3", `Anuncio ${i + 1}: ${f.marca ?? "?"} ${f.modelo ?? ""} ${f.anio ?? ""}`));
-  const chips = elemento("div", undefined, "chips");
-  for (const [campo, proc] of Object.entries(a.procedencia)) {
-    const valor = f[campo] ?? "desconocido";
-    chips.append(elemento("span", `${campo}: ${valor}`, proc));
+  const t = el("article", undefined, "coche aparece");
+  t.style.animationDelay = `${120 + i * 80}ms`;
+
+  const cab = el("div", undefined, "coche-cab");
+  const mat = el("span", undefined, "matricula");
+  mat.append(el("b", "E"), el("span", `${String(i + 1).padStart(2, "0")} · ${f.anio ?? "----"}`));
+  const h = el("h3", [f.marca, f.modelo].filter(Boolean).join(" ") || "Coche sin identificar");
+  const detalle = [f.version, f.km != null ? `${f.km.toLocaleString("es")} km` : null, COMBUSTIBLES[f.combustible]].filter(Boolean).join(" · ");
+  if (detalle) h.append(el("small", detalle));
+  cab.append(mat, h);
+  if (f.precio) {
+    const p = el("div", undefined, "precio-gordo");
+    p.append(el("span", "Pide"), el("strong", euros(f.precio)));
+    cab.append(p);
   }
-  if (a.deducido.frecuencia_itv) chips.append(elemento("span", `ITV: ${a.deducido.frecuencia_itv}`, "deducido"));
-  t.append(chips);
-  const v = a.valoracion_precio;
-  if (v) t.append(elemento("p", `Precio de mercado estimado: ${v.rango_min.toLocaleString("es")}–${v.rango_max.toLocaleString("es")} €` +
-                                (v.veredicto ? ` · Este anuncio está ${v.veredicto} (${v.desviacion_pct} %)` : "")));
-  const c = a.coste_3_anios;
-  if (c) t.append(elemento("p", `Coste estimado a 3 años: ${c.total.toLocaleString("es")} € (${c.supuestos.join(" · ")})`));
-  a.alertas.forEach((al) => t.append(elemento("p", `⚠ ${al.mensaje}`)));
-  if (a.nota) t.append(elemento("p", a.nota, "uso"));
-  if (a.opiniones) t.append(bloqueOpiniones(a.opiniones));
+  t.append(cab);
+  if (a.nota) t.append(el("p", a.nota, "nota-imagen"));
+
+  const cuerpo = el("div", undefined, "coche-cuerpo");
+  const v = a.valoracion_precio, c = a.coste_3_anios;
+  if (v) cuerpo.append(seccionPrecio(v, f.precio));
+  if (c) cuerpo.append(seccionCoste(c));
+  if (!!v !== !!c) cuerpo.lastChild.classList.add("ancho");   // si solo hay una, ocupa todo el ancho
+  cuerpo.append(seccionAlertas(a.alertas), seccionFicha(a));
+  if (a.opiniones) cuerpo.append(seccionOpiniones(a.opiniones));
+  t.append(cuerpo);
   return t;
 }
 
-function bloqueOpiniones(op) {
-  const div = elemento("div", undefined, "opiniones");
-  div.append(elemento("h3", "Lo que dicen los propietarios"));
-  if (!op.puntos.length) {
-    div.append(elemento("p", "No se han encontrado opiniones con fuentes fiables para este modelo.", "uso"));
-    return div;
-  }
-  const ul = elemento("ul");
-  for (const p of op.puntos) {
-    const li = elemento("li", `${p.tipo === "fuerte" ? "👍" : "⚠"} ${p.texto}`);
-    p.fuentes.filter((f) => /^https?:\/\//.test(f.url)).forEach((f, i) => {   // solo enlaces web normales
-      const a = elemento("a", `[${i + 1}]`);
-      a.href = f.url; a.title = f.titulo; a.target = "_blank"; a.rel = "noopener noreferrer";
-      li.append(a);
-    });
-    ul.append(li);
-  }
-  div.append(ul, elemento("p", op.aviso, "uso"));
-  return div;
-}
+async function analizar(ev) {
+  if (ev) ev.preventDefault();
+  const boton = $("boton");
+  const conOpiniones = $("opiniones").checked;
+  const archivo = $("imagen").files[0];
 
-async function analizar() {
-  const res = $("resultado");
-  res.replaceChildren(elemento("p", "Analizando…"));
-  $("boton").disabled = true;
+  let peticion;
+  if (modo === "imagen") {
+    if (!archivo) return mostrarError("Falta la captura", "Elige o arrastra una imagen del anuncio.");
+    const datos = new FormData();
+    datos.append("imagen", archivo);
+    datos.append("km_anuales", $("km").value);
+    datos.append("provincia", $("provincia").value);
+    datos.append("opiniones", conOpiniones);
+    peticion = fetch("/analizar-imagen", { method: "POST", body: datos });
+  } else {
+    const anuncios = separar($("texto").value);
+    if (!anuncios.length) return mostrarError("No hay nada que analizar", "Pega el texto de al menos un anuncio.");
+    if (anuncios.length > 3) return mostrarError("Demasiados anuncios", "Puedes comparar como máximo 3 a la vez.");
+    peticion = fetch("/analizar", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anuncios, km_anuales: Number($("km").value), provincia: $("provincia").value,
+                             opiniones: conOpiniones }),
+    });
+  }
+
+  boton.disabled = true;
+  mostrarCarga(conOpiniones);
+  $("resultado").scrollIntoView({ behavior: "smooth", block: "start" });
   try {
-    let r;
-    const archivo = $("imagen").files[0];
-    if (archivo) {
-      const datos = new FormData();
-      datos.append("imagen", archivo);
-      datos.append("km_anuales", $("km").value);
-      datos.append("provincia", $("provincia").value);
-      datos.append("opiniones", $("opiniones").checked);
-      r = await fetch("/analizar-imagen", { method: "POST", body: datos });
-    } else {
-      const anuncios = $("texto").value.split(/\n-{3,}\n/).map((s) => s.trim()).filter(Boolean);
-      r = await fetch("/analizar", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ anuncios, km_anuales: Number($("km").value), provincia: $("provincia").value,
-                               opiniones: $("opiniones").checked }),
-      });
-    }
-    const j = await r.json();
+    const r = await peticion;
+    const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : "Revisa los datos introducidos.");
 
-    const inf = j.informe;
-    const t = elemento("div", undefined, "tarjeta");
-    t.append(elemento("h2", "Veredicto"), elemento("p", inf.veredicto));
-    t.append(lista("Ranking", inf.ranking), lista("Puntos fuertes", inf.puntos_fuertes),
-             lista("Alertas", inf.alertas), lista("Pregúntale al vendedor", inf.preguntas_vendedor));
-    t.append(elemento("p", `${j.uso.modelos.join(" + ")} · ${j.uso.segundos} s · ${(j.uso.coste_usd * 100).toFixed(2)} céntimos de dólar`, "uso"));
-    res.replaceChildren(t, ...j.analisis.map(tarjetaCoche));
+    const uso = el("div", undefined, "uso");
+    uso.append(el("span", j.uso.modelos.join(" + ")), el("span", `${j.uso.segundos} s`),
+               el("span", `${(j.uso.coste_usd * 100).toFixed(2)} ¢ USD`));
+    $("resultado").replaceChildren(seccionInforme(j.informe, j.uso, j.analisis.length),
+                                   ...j.analisis.map(tarjetaCoche), uso);
   } catch (e) {
-    res.replaceChildren(elemento("p", `Error: ${e.message}`, "error"));
+    mostrarError("No se ha podido analizar", e.message);
   } finally {
-    $("boton").disabled = false;
+    clearInterval(temporizador);
+    boton.disabled = false;
   }
 }
 
-$("boton").addEventListener("click", analizar);
+function mostrarError(titulo, mensaje) {
+  const caja = el("div", undefined, "error aparece");
+  caja.append(el("b", titulo), el("span", mensaje));
+  $("resultado").replaceChildren(caja);
+}
+
+$("analizar").addEventListener("submit", analizar);
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !$("boton").disabled) analizar(e);
+});
 </script>
 </body>
 </html>
