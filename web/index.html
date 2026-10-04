@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analizador de coches de ocasión</title>
+<style>
+  :root { --tinta:#1b2430; --suave:#5b6573; --acento:#0f6e6e; --fondo:#f6f7f9; --linea:#d5dbe1;
+          --anuncio:#e3f1f0; --deducido:#e8f5e9; --desconocido:#fdecea; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui, sans-serif; color:var(--tinta); background:var(--fondo); }
+  main { max-width:860px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { margin:0 0 4px; font-size:1.7rem; }
+  .sub { color:var(--suave); margin:0 0 20px; }
+  textarea { width:100%; min-height:150px; padding:12px; border:1px solid var(--linea); border-radius:8px; font:inherit; }
+  .fila { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0; }
+  label { font-size:.9rem; color:var(--suave); display:flex; flex-direction:column; gap:4px; }
+  input { padding:8px; border:1px solid var(--linea); border-radius:6px; font:inherit; }
+  button { background:var(--acento); color:#fff; border:0; border-radius:8px; padding:10px 18px; font:inherit; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .tarjeta { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px; margin-top:16px; }
+  .chips span { display:inline-block; padding:3px 8px; border-radius:6px; margin:3px; font-size:.85rem; }
+  .anuncio { background:var(--anuncio); } .deducido { background:var(--deducido); } .desconocido { background:var(--desconocido); }
+  .uso { color:var(--suave); font-size:.85rem; margin-top:12px; }
+  .aviso { color:var(--suave); font-size:.8rem; margin-top:24px; }
+  .error { color:#b3261e; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Analizador de coches de ocasión</h1>
+  <p class="sub">Pega uno o varios anuncios (sepáralos con una línea <b>---</b>) o sube una captura.</p>
+
+  <textarea id="texto" placeholder="Vendo Seat León 1.6 TDI de 2016, 85.000 km, ITV recién pasada..."></textarea>
+  <div class="fila">
+    <label>O sube una captura <input type="file" id="imagen" accept="image/png,image/jpeg,image/webp"></label>
+    <label>Km al año <input type="number" id="km" value="15000" min="1000" step="1000"></label>
+    <label>Provincia <input id="provincia" value="Málaga"></label>
+  </div>
+  <button id="boton">Analizar</button>
+  <p class="uso">La primera vez puede tardar unos segundos en despertar.</p>
+
+  <div id="resultado"></div>
+
+  <p class="aviso">Proyecto personal, no oficial. Resultados orientativos: compruébalos siempre con el informe del vehículo de la DGT
+  y una revisión mecánica. Precios de carburantes: datos abiertos del Ministerio.</p>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function elemento(tag, texto, clase) {
+  const e = document.createElement(tag);
+  if (texto !== undefined) e.textContent = texto;   // textContent: nunca se interpreta como HTML
+  if (clase) e.className = clase;
+  return e;
+}
+
+function lista(titulo, items) {
+  const div = elemento("div");
+  if (!items || !items.length) return div;
+  div.append(elemento("h3", titulo));
+  const ul = elemento("ul");
+  items.forEach((i) => ul.append(elemento("li", i)));
+  div.append(ul);
+  return div;
+}
+
+function tarjetaCoche(a, i) {
+  const t = elemento("div", undefined, "tarjeta");
+  const f = a.ficha;
+  t.append(elemento("h3", `Anuncio ${i + 1}: ${f.marca ?? "?"} ${f.modelo ?? ""} ${f.anio ?? ""}`));
+  const chips = elemento("div", undefined, "chips");
+  for (const [campo, proc] of Object.entries(a.procedencia)) {
+    const valor = f[campo] ?? "desconocido";
+    chips.append(elemento("span", `${campo}: ${valor}`, proc));
+  }
+  if (a.deducido.frecuencia_itv) chips.append(elemento("span", `ITV: ${a.deducido.frecuencia_itv}`, "deducido"));
+  t.append(chips);
+  const v = a.valoracion_precio;
+  if (v) t.append(elemento("p", `Precio de mercado estimado: ${v.rango_min.toLocaleString("es")}–${v.rango_max.toLocaleString("es")} €` +
+                                (v.veredicto ? ` · Este anuncio está ${v.veredicto} (${v.desviacion_pct} %)` : "")));
+  const c = a.coste_3_anios;
+  if (c) t.append(elemento("p", `Coste estimado a 3 años: ${c.total.toLocaleString("es")} € (${c.supuestos.join(" · ")})`));
+  a.alertas.forEach((al) => t.append(elemento("p", `⚠ ${al.mensaje}`)));
+  if (a.nota) t.append(elemento("p", a.nota, "uso"));
+  return t;
+}
+
+async function analizar() {
+  const res = $("resultado");
+  res.replaceChildren(elemento("p", "Analizando…"));
+  $("boton").disabled = true;
+  try {
+    let r;
+    const archivo = $("imagen").files[0];
+    if (archivo) {
+      const datos = new FormData();
+      datos.append("imagen", archivo);
+      datos.append("km_anuales", $("km").value);
+      datos.append("provincia", $("provincia").value);
+      r = await fetch("/analizar-imagen", { method: "POST", body: datos });
+    } else {
+      const anuncios = $("texto").value.split(/\n-{3,}\n/).map((s) => s.trim()).filter(Boolean);
+      r = await fetch("/analizar", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anuncios, km_anuales: Number($("km").value), provincia: $("provincia").value }),
+      });
+    }
+    const j = await r.json();
+    if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : "Revisa los datos introducidos.");
+
+    const inf = j.informe;
+    const t = elemento("div", undefined, "tarjeta");
+    t.append(elemento("h2", "Veredicto"), elemento("p", inf.veredicto));
+    t.append(lista("Ranking", inf.ranking), lista("Puntos fuertes", inf.puntos_fuertes),
+             lista("Alertas", inf.alertas), lista("Pregúntale al vendedor", inf.preguntas_vendedor));
+    t.append(elemento("p", `${j.uso.modelos.join(" + ")} · ${j.uso.segundos} s · ${(j.uso.coste_usd * 100).toFixed(2)} céntimos de dólar`, "uso"));
+    res.replaceChildren(t, ...j.analisis.map(tarjetaCoche));
+  } catch (e) {
+    res.replaceChildren(elemento("p", `Error: ${e.message}`, "error"));
+  } finally {
+    $("boton").disabled = false;
+  }
+}
+
+$("boton").addEventListener("click", analizar);
+</script>
+</body>
+</html>

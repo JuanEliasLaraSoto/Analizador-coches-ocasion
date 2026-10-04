@@ -1,0 +1,25 @@
+{
+  "fecha": "2026-10-04T17:00:35",
+  "estrategia": "haiku",
+  "casos": 8,
+  "campos_correctos_pct": 90.2,
+  "alucinaciones_tras_verificar": 10,
+  "campos_descartados_por_cita": 0,
+  "cifras_inventadas_en_informes": 3,
+  "coste_total_usd": 0.0,
+  "coste_por_anuncio_usd": 0.0,
+  "segundos_por_anuncio": 3.2,
+  "fallos": [
+    "completo.version: esperado None, obtenido '1.6 TDI Style'",
+    "completo.itv_hasta: esperado None, obtenido '03/2027'",
+    "caotico.marca: esperado None, obtenido 'Volkswagen'",
+    "caotico.version: esperado None, obtenido 'tsi'",
+    "incompleto.modelo: esperado 'Clio', obtenido None",
+    "km_sospechosos.version: esperado None, obtenido '320d'",
+    "sin_itv.version: esperado None, obtenido 'HDI'",
+    "sin_itv.itv_hasta: esperado None, obtenido 'caducada'",
+    "electrico.version: esperado None, obtenido '64 kWh'",
+    "con_telefono.marca: esperado None, obtenido 'Seat'",
+    "con_telefono.version: esperado None, obtenido '1.0 MPI'"
+  ]
+}
